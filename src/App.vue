@@ -34,7 +34,8 @@
 						<div class="mt-1 relative rounded-md shadow-md">
 							<input
 								v-model="ticker"
-								@keydown.enter="add"
+								@keydown.enter="add(ticker)"
+								@input="coinSearch(ticker)"
 								type="text"
 								name="wallet"
 								id="wallet"
@@ -42,35 +43,26 @@
 								placeholder="Например DOGE"
 							/>
 						</div>
-						<!--						<div
+						<div
+							v-if="chosenCoins.length > 0"
 							class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
 						>
 							<span
+								v-for="(coin, id) in chosenCoins.slice(0, 4)"
+								@click="add(coin)"
+								:key="id"
 								class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
 							>
-								BTC
+								{{ coin }}
 							</span>
-							<span
-								class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-							>
-								DOGE
-							</span>
-							<span
-								class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-							>
-								BCH
-							</span>
-							<span
-								class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-							>
-								CHD
-							</span>
-						</div>-->
-						<!--						<div class="text-sm text-red-600">Такой тикер уже добавлен</div>-->
+						</div>
+						<div v-if="validationError" class="text-sm text-red-600">
+							Такой тикер уже добавлен
+						</div>
 					</div>
 				</div>
 				<button
-					@click="add"
+					@click="add(ticker)"
 					type="button"
 					class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
 				>
@@ -105,7 +97,7 @@
 					>
 						<div class="px-4 py-5 sm:p-6 text-center">
 							<dt class="text-sm font-medium text-gray-500 truncate">
-								{{ t.name }} - USD
+								{{ t.name.toUpperCase() }} - USD
 							</dt>
 							<dd class="mt-1 text-3xl font-semibold text-gray-900">
 								{{ t.price }}
@@ -181,20 +173,35 @@
 <script>
 export default {
 	name: 'App',
+
 	data() {
 		return {
 			ticker: '',
 			tickers: [],
 			sel: null,
 			graph: [],
+			validationError: false,
+			coinsList: [],
+			chosenCoins: [],
 		};
 	},
 
-	methods: {
-		add() {
-			const currentTicker = { name: this.ticker, price: '-' };
+	async mounted() {
+		const f = await fetch(
+			`https://min-api.cryptocompare.com/data/all/coinlist`
+		);
+		const data = await f.json();
+		this.coinsList = Object.keys(data.Data);
+	},
 
-			this.tickers.push(currentTicker);
+	methods: {
+		add(ticker) {
+			const currentTicker = { name: ticker, price: '-' };
+
+			this.tickers.find(t => t.name === currentTicker.name)
+				? (this.validationError = true)
+				: this.tickers.push(currentTicker);
+
 			setInterval(async () => {
 				const f = await fetch(
 					`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=fbc197e1fc1482a4cff9cb253466f81b417bbf4ed572288da779f52eef3fe59a`
@@ -209,6 +216,12 @@ export default {
 				}
 			}, 3000);
 			this.ticker = '';
+		},
+
+		coinSearch(ticker) {
+			this.chosenCoins = this.coinsList.filter(coin =>
+				coin.toLowerCase().includes(ticker.toLowerCase())
+			);
 		},
 
 		select(ticker) {
