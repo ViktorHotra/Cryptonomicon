@@ -48,7 +48,7 @@
 							class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
 						>
 							<span
-								v-for="(coin, id) in chosenCoins.slice(0, 4)"
+								v-for="(coin, id) in chosenCoins"
 								@click="add(coin)"
 								:key="id"
 								class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
@@ -198,9 +198,11 @@ export default {
 		add(ticker) {
 			const currentTicker = { name: ticker, price: '-' };
 
-			this.tickers.find(t => t.name === currentTicker.name)
-				? (this.validationError = true)
-				: this.tickers.push(currentTicker);
+			if (this.tickers.find(t => t.name === currentTicker.name)) {
+				this.validationError = true;
+				return;
+			}
+			this.tickers.push(currentTicker);
 
 			setInterval(async () => {
 				const f = await fetch(
@@ -215,13 +217,16 @@ export default {
 					this.graph.push(data.USD);
 				}
 			}, 3000);
+			this.chosenCoins = this.chosenCoins.filter(
+				ticker => ticker !== currentTicker.name
+			);
 			this.ticker = '';
 		},
 
 		coinSearch(ticker) {
-			this.chosenCoins = this.coinsList.filter(coin =>
-				coin.toLowerCase().includes(ticker.toLowerCase())
-			);
+			this.chosenCoins = this.coinsList
+				.filter(coin => coin.toLowerCase().includes(ticker.toLowerCase()))
+				.slice(0, 4);
 		},
 
 		select(ticker) {
